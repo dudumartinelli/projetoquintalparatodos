@@ -73,7 +73,7 @@ function Home() {
             Inscrição aberta
           </p>
           <h1 className="font-display text-6xl leading-[0.95] tracking-tight sm:text-7xl lg:text-8xl">
-            Deixe seu <em className="text-primary">nome</em> na lista.
+            Adicione o nome do <em className="text-primary">Aluno</em> na lista.
           </h1>
           <p className="max-w-reading text-lg text-muted-foreground">
             Só precisamos do seu nome. Ele é guardado com segurança e fica visível
@@ -102,7 +102,7 @@ function Home() {
                 <p className="text-sm text-muted-foreground">Leva menos de 10 segundos.</p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="name">Nome completo</Label>
+                <Label htmlFor="name">Nome completo do Aluno</Label>
                 <Input
                   id="name"
                   name="name"
