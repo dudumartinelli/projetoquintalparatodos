@@ -14,14 +14,6 @@ Um formulário público em que o visitante informa apenas o nome. Os nomes ficam
 - Netlify Identity (`@netlify/identity`) para login dos administradores
 - Hospedagem na Netlify
 
-## Como adicionar um administrador
-
-1. No painel da Netlify, abra o projeto → **Identity** → **Invite users** e informe o e-mail.
-2. A pessoa recebe o convite, clica no link e cria uma senha (o site a leva para `/admin`).
-3. Em **Identity**, abra o usuário e adicione o papel (role) **`admin`**.
-
-Só contas com o papel `admin` conseguem ver a lista: a checagem acontece no servidor. Recomendo deixar o cadastro como **Invite only** em *Project configuration → Identity → Registration*.
-
 ## Rodando localmente
 
 ```bash
