@@ -81,7 +81,7 @@ function Home() {
           </p>
         </section>
 
-        <section className="rounded-2xl border bg-card p-6 shadow-[0_30px_60px_-30px_oklch(0.4_0.08_40/0.35)] sm:p-10">
+        <section className="rounded-2xl border bg-card p-6 shadow-[0_30px_60px_-30px_oklch(0.35_0.08_255/0.28)] sm:p-10">
           {status === 'success' ? (
             <div className="space-y-6 text-center" role="status">
               <div className="mx-auto grid size-14 place-items-center rounded-full bg-primary text-primary-foreground">
