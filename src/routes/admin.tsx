@@ -33,10 +33,11 @@ import {
 } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { deleteEntry, getViewer, listEntries } from '@/lib/entries.functions'
+import { weekdays } from '@/lib/entry-options'
 import { buildCsv, downloadFile, exportFilename, type ExportRow } from '@/lib/export'
 
 export const Route = createFileRoute('/admin')({
-  head: () => ({ meta: [{ title: 'Administração · Lista de Nomes' }, { name: 'robots', content: 'noindex' }] }),
+  head: () => ({ meta: [{ title: 'Administração · Projeto Quintal para Todos' }, { name: 'robots', content: 'noindex' }] }),
   component: AdminPage,
 })
 
@@ -95,7 +96,7 @@ function AdminPage() {
                 <ArrowLeft />
               </Link>
             </Button>
-            <span className="font-display text-2xl tracking-tight">Lista de Nomes</span>
+            <span className="font-display text-2xl tracking-tight">Projeto Quintal para Todos</span>
             <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
               Admin
             </span>
@@ -433,6 +434,8 @@ function EntriesPanel() {
                 <TableRow>
                   <TableHead className="w-16">#</TableHead>
                   <TableHead>Nome</TableHead>
+                  <TableHead>Dias</TableHead>
+                  <TableHead>Horário</TableHead>
                   <TableHead className="hidden sm:table-cell">Enviado em</TableHead>
                   <TableHead className="w-12">
                     <span className="sr-only">Ações</span>
@@ -444,6 +447,14 @@ function EntriesPanel() {
                   <TableRow key={row.id}>
                     <TableCell className="text-muted-foreground tabular-nums">{positions.get(row.id)}</TableCell>
                     <TableCell className="font-medium">{row.name}</TableCell>
+                    <TableCell>
+                      {row.weekdays.length > 0
+                        ? row.weekdays
+                            .map((day) => weekdays.find((option) => option.value === day)?.label ?? day)
+                            .join(', ')
+                        : '—'}
+                    </TableCell>
+                    <TableCell>{row.classTime || '—'}</TableCell>
                     <TableCell className="hidden text-muted-foreground sm:table-cell">{formatDate(row.createdAt)}</TableCell>
                     <TableCell>
                       <Button
@@ -459,7 +470,7 @@ function EntriesPanel() {
                 ))}
                 {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                       Nenhum nome encontrado para “{query}”.
                     </TableCell>
                   </TableRow>

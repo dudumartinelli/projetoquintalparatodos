@@ -1,11 +1,11 @@
 # Lista de Nomes
 
-Um formulário público em que o visitante informa apenas o nome. Os nomes ficam guardados em um banco de dados e só podem ser vistos, pesquisados, removidos e exportados por administradores.
+Um formulário público em que o visitante informa o nome, seleciona um ou mais dias da semana e escolhe um horário (18:40 ou 19:10). As inscrições ficam guardadas em um banco de dados e só podem ser vistas, pesquisadas, removidas e exportadas por administradores.
 
 ## Telas
 
-- **`/`**: formulário público com um único campo (nome).
-- **`/admin`**: área restrita. Login, aceite de convite, redefinição de senha, lista de nomes com busca, total/recebidos hoje, exclusão e exportação (CSV para Excel com `;`, CSV padrão para Google Sheets e TXT só com os nomes).
+- **`/`**: formulário público para informar o nome, escolher dias da semana e selecionar o horário.
+- **`/admin`**: área restrita. Login, aceite de convite, redefinição de senha, lista de inscrições com busca, total/recebidos hoje, exclusão e exportação (CSV para Excel com `;`, CSV padrão para Google Sheets e TXT só com os nomes).
 
 ## Tecnologias
 

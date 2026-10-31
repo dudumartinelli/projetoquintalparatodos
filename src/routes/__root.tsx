@@ -6,9 +6,9 @@ import { NotFoundPage } from '@/components/error-pages'
 
 import '../styles.css'
 
-const siteName = 'Lista de Nomes'
+const siteName = 'Projeto Quintal para Todos'
 const siteDescription =
-  'Deixe seu nome na lista. Apenas administradores podem ver e exportar os nomes.'
+  'Inscreva o aluno, escolha os dias da semana e o horário. Apenas administradores podem ver e exportar os dados.'
 
 export const Route = createRootRoute({
   head: () => ({

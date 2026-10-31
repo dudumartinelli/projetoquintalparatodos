@@ -3,8 +3,11 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowRight, Check, Lock } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { classTimes, weekdays, type ClassTime, type Weekday } from '@/lib/entry-options'
 import { submitName } from '@/lib/entries.functions'
 
 export const Route = createFileRoute('/')({
@@ -12,12 +15,18 @@ export const Route = createFileRoute('/')({
 })
 
 type Status = 'idle' | 'pending' | 'success' | 'error'
+type FormErrors = { name?: string; weekdays?: string; classTime?: string }
 
 function Home() {
   const [name, setName] = useState('')
+  const [selectedWeekdays, setSelectedWeekdays] = useState<Weekday[]>([])
+  const [classTime, setClassTime] = useState<ClassTime | ''>('')
   const [status, setStatus] = useState<Status>('idle')
-  const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<FormErrors>({})
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [submittedName, setSubmittedName] = useState('')
+  const [submittedWeekdays, setSubmittedWeekdays] = useState<Weekday[]>([])
+  const [submittedClassTime, setSubmittedClassTime] = useState<ClassTime | ''>('')
 
   // Invite and password-reset emails link to the site root; hand them to the admin area.
   useEffect(() => {
@@ -30,20 +39,33 @@ function Home() {
     event.preventDefault()
     if (status === 'pending') return
     const trimmed = name.trim()
-    if (trimmed.length < 2) {
-      setError('Digite pelo menos 2 caracteres.')
+    const errors: FormErrors = {}
+    if (trimmed.length < 2) errors.name = 'Digite pelo menos 2 caracteres.'
+    if (selectedWeekdays.length === 0) errors.weekdays = 'Selecione pelo menos um dia.'
+    if (!classTime) errors.classTime = 'Selecione um horário.'
+    setFieldErrors(errors)
+    if (Object.keys(errors).length > 0 || !classTime) {
       return
     }
-    setError(null)
+    const orderedWeekdays = weekdays
+      .filter((day) => selectedWeekdays.includes(day.value))
+      .map((day) => day.value)
+    setSubmitError(null)
     setStatus('pending')
     try {
-      await submitName({ data: { name: trimmed } })
+      await submitName({
+        data: { name: trimmed, weekdays: orderedWeekdays, classTime },
+      })
       setSubmittedName(trimmed)
+      setSubmittedWeekdays(orderedWeekdays)
+      setSubmittedClassTime(classTime)
       setName('')
+      setSelectedWeekdays([])
+      setClassTime('')
       setStatus('success')
     } catch {
       setStatus('error')
-      setError('Não foi possível enviar agora. Tente novamente em instantes.')
+      setSubmitError('Não foi possível enviar agora. Tente novamente em instantes.')
     }
   }
 
@@ -59,7 +81,7 @@ function Home() {
       />
 
       <header className="relative mx-auto flex w-full max-w-content items-center justify-between px-4 py-6 sm:px-6">
-        <span className="font-display text-2xl tracking-tight">Lista de Nomes</span>
+        <span className="font-display text-2xl tracking-tight">Projeto Quintal para Todos</span>
         <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
           <Link to="/admin">
             <Lock /> Área do administrador
@@ -76,7 +98,7 @@ function Home() {
             Adicione o nome do <em className="text-primary">Aluno</em> na lista.
           </h1>
           <p className="max-w-reading text-lg text-muted-foreground">
-            Só precisamos do seu nome. Ele é guardado com segurança e fica visível
+            Informe o nome do aluno, os dias da semana e o horário desejado. Os dados ficam visíveis
             apenas para os organizadores.
           </p>
         </section>
@@ -89,7 +111,13 @@ function Home() {
               </div>
               <div className="space-y-2">
                 <h2 className="font-display text-4xl">Pronto, {submittedName}!</h2>
-                <p className="text-muted-foreground">Seu nome foi adicionado à lista.</p>
+                <p className="text-muted-foreground">Sua inscrição foi adicionada à lista.</p>
+                <p className="text-sm text-muted-foreground">
+                  {submittedWeekdays
+                    .map((day) => weekdays.find((option) => option.value === day)?.label)
+                    .join(', ')}{' '}
+                  às {submittedClassTime}
+                </p>
               </div>
               <Button variant="outline" onClick={() => setStatus('idle')}>
                 Enviar outro nome
@@ -98,8 +126,8 @@ function Home() {
           ) : (
             <form onSubmit={handleSubmit} noValidate className="space-y-6">
               <div className="space-y-1">
-                <h2 className="font-display text-4xl">Seu nome</h2>
-                <p className="text-sm text-muted-foreground">Leva menos de 10 segundos.</p>
+                <h2 className="font-display text-4xl">Inscrição do aluno</h2>
+                <p className="text-sm text-muted-foreground">Preencha os dados da inscrição.</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="name">Nome completo do Aluno</Label>
@@ -110,19 +138,92 @@ function Home() {
                   placeholder="Ex.: Maria da Silva"
                   value={name}
                   maxLength={120}
-                  onChange={(e) => setName(e.target.value)}
-                  aria-invalid={error ? true : undefined}
-                  aria-describedby={error ? 'name-error' : undefined}
+                  onChange={(e) => {
+                    setName(e.target.value)
+                    setFieldErrors((current) => ({ ...current, name: undefined }))
+                  }}
+                  aria-invalid={fieldErrors.name ? true : undefined}
+                  aria-describedby={fieldErrors.name ? 'name-error' : undefined}
                   disabled={status === 'pending'}
                   className="h-12 text-base md:text-base"
                   required
                 />
-                {error && (
+                {fieldErrors.name && (
                   <p id="name-error" role="alert" className="text-sm text-destructive">
-                    {error}
+                    {fieldErrors.name}
                   </p>
                 )}
               </div>
+              <fieldset className="space-y-3">
+                <legend className="text-sm leading-none font-medium">Dias da semana</legend>
+                <p className="text-sm text-muted-foreground">Selecione um ou mais dias.</p>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {weekdays.map((day) => {
+                    const id = `weekday-${day.value}`
+                    return (
+                      <div key={day.value} className="flex items-center gap-2">
+                        <Checkbox
+                          id={id}
+                          checked={selectedWeekdays.includes(day.value)}
+                          onCheckedChange={(checked) => {
+                            setSelectedWeekdays((current) =>
+                              checked
+                                ? [...current, day.value]
+                                : current.filter((value) => value !== day.value),
+                            )
+                            setFieldErrors((current) => ({ ...current, weekdays: undefined }))
+                          }}
+                          aria-invalid={fieldErrors.weekdays ? true : undefined}
+                          aria-describedby={fieldErrors.weekdays ? 'weekdays-error' : undefined}
+                          disabled={status === 'pending'}
+                        />
+                        <Label htmlFor={id} className="cursor-pointer font-normal">
+                          {day.label}
+                        </Label>
+                      </div>
+                    )
+                  })}
+                </div>
+                {fieldErrors.weekdays && (
+                  <p id="weekdays-error" role="alert" className="text-sm text-destructive">
+                    {fieldErrors.weekdays}
+                  </p>
+                )}
+              </fieldset>
+              <fieldset className="space-y-3">
+                <legend className="text-sm leading-none font-medium">Horário</legend>
+                <RadioGroup
+                  value={classTime}
+                  onValueChange={(value) => {
+                    setClassTime(classTimes.find((time) => time === value) ?? '')
+                    setFieldErrors((current) => ({ ...current, classTime: undefined }))
+                  }}
+                  aria-label="Horário"
+                  aria-invalid={fieldErrors.classTime ? true : undefined}
+                  aria-describedby={fieldErrors.classTime ? 'class-time-error' : undefined}
+                  disabled={status === 'pending'}
+                  className="grid grid-cols-2"
+                >
+                  {classTimes.map((time) => (
+                    <div key={time} className="flex items-center gap-2">
+                      <RadioGroupItem id={`time-${time}`} value={time} />
+                      <Label htmlFor={`time-${time}`} className="cursor-pointer font-normal">
+                        {time}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+                {fieldErrors.classTime && (
+                  <p id="class-time-error" role="alert" className="text-sm text-destructive">
+                    {fieldErrors.classTime}
+                  </p>
+                )}
+              </fieldset>
+              {submitError && (
+                <p role="alert" className="text-sm text-destructive">
+                  {submitError}
+                </p>
+              )}
               <Button
                 type="submit"
                 size="lg"

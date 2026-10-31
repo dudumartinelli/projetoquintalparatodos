@@ -1,0 +1,92 @@
+{
+  "version": "8",
+  "dialect": "postgres",
+  "id": "7c6f2748-a5dd-464d-b73a-386e22a97e97",
+  "prevIds": [
+    "f4cd4029-7e9a-423b-b43e-dd28dad50b78"
+  ],
+  "ddl": [
+    {
+      "isRlsEnabled": false,
+      "name": "entries",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "entries"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "entries"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 1,
+      "default": "'{}'",
+      "generated": null,
+      "identity": null,
+      "name": "weekdays",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "entries"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "''",
+      "generated": null,
+      "identity": null,
+      "name": "class_time",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "entries"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "entries"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "entries_pkey",
+      "schema": "public",
+      "table": "entries",
+      "entityType": "pks"
+    }
+  ],
+  "renames": []
+}

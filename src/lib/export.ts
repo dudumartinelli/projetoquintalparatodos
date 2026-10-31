@@ -1,4 +1,12 @@
-export type ExportRow = { id: number; name: string; createdAt: string }
+import { weekdays } from './entry-options'
+
+export type ExportRow = {
+  id: number
+  name: string
+  weekdays: string[]
+  classTime: string
+  createdAt: string
+}
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
@@ -11,9 +19,17 @@ function csvCell(value: string, separator: string) {
 }
 
 export function buildCsv(rows: ExportRow[], separator: ',' | ';') {
-  const header = ['#', 'Nome', 'Enviado em']
+  const header = ['#', 'Nome', 'Dias da semana', 'Horário', 'Enviado em']
   const lines = rows.map((row, index) =>
-    [String(rows.length - index), row.name, formatDate(row.createdAt)].map((cell) => csvCell(cell, separator)).join(separator),
+    [
+      String(rows.length - index),
+      row.name,
+      row.weekdays.map((day) => weekdays.find((option) => option.value === day)?.label ?? day).join(', '),
+      row.classTime || '—',
+      formatDate(row.createdAt),
+    ]
+      .map((cell) => csvCell(cell, separator))
+      .join(separator),
   )
   return [header.join(separator), ...lines].join('\r\n')
 }

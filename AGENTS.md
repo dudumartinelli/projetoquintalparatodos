@@ -2,20 +2,20 @@
 
 ## Project Overview
 
-"Lista de Nomes": a public single-field form (name only) that stores submissions in Netlify Database. Only Netlify Identity users with the `admin` role can view, search, delete, and export the list. UI copy is in Brazilian Portuguese (`lang="pt-BR"`).
+"Projeto Quintal para Todos": a public form for student name, one or more weekdays, and a class time (18:40 or 19:10), stored in Netlify Database. Only Netlify Identity users with the `admin` role can view, search, delete, and export submissions. UI copy is in Brazilian Portuguese (`lang="pt-BR"`).
 
 ## Architecture
 
 | Piece | Location | Notes |
 | --- | --- | --- |
-| DB schema | `db/schema.ts` | Single `entries` table (`id`, `name`, `created_at`). |
+| DB schema | `db/schema.ts` | Single `entries` table (`id`, `name`, `weekdays`, `class_time`, `created_at`). |
 | DB client | `db/index.ts` | `drizzle-orm/netlify-db`, connection is automatic. |
 | Migrations | `netlify/database/migrations/` | Generated with `npx drizzle-kit generate --name <name>`. Never edit applied migrations; never run migrate/push. |
 | Server functions | `src/lib/entries.functions.ts` | `submitName` (public, zod-validated), `getViewer`, and admin-only `listEntries` / `deleteEntry` guarded by the `requireAdmin` middleware. |
 | Export helpers | `src/lib/export.ts` | Client-side CSV/TXT generation with UTF-8 BOM and formula-injection escaping. |
-| Public form | `src/routes/index.tsx` | Also forwards Identity email links (`#invite_token`, `#recovery_token`, …) to `/admin`, because Identity emails link to the site root. |
+| Public form | `src/routes/index.tsx` | Collects name, selected weekdays, and class time. Also forwards Identity email links (`#invite_token`, `#recovery_token`, …) to `/admin`, because Identity emails link to the site root. |
 | Admin area | `src/routes/admin.tsx` | Client-side state machine: loading → login / invite / recovery / forbidden / admin. |
-| Theme | `src/styles.css`, fonts in `src/routes/__root.tsx` | Warm paper palette, Instrument Serif headings (`font-display`) + Manrope body. |
+| Theme | `src/styles.css`, fonts in `src/routes/__root.tsx` | Cool blue palette, Instrument Serif headings (`font-display`) + Manrope body. |
 
 ## Non-obvious decisions
 

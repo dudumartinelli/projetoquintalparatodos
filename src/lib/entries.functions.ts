@@ -5,18 +5,28 @@ import { z } from 'zod'
 
 import { db } from '../../db/index.js'
 import { entries } from '../../db/schema.js'
+import { classTimes, weekdayValues } from './entry-options'
 
 export const ADMIN_ROLE = 'admin'
 
 const nameInput = z.object({
   name: z.string().trim().min(2, 'Digite pelo menos 2 caracteres.').max(120, 'Use no máximo 120 caracteres.'),
+  weekdays: z.array(z.enum(weekdayValues)).min(1).max(7).refine(
+    (values) => new Set(values).size === values.length,
+    'Remova dias repetidos.',
+  ),
+  classTime: z.enum(classTimes),
 })
 
 /** Public: anyone can add their name to the list. */
 export const submitName = createServerFn({ method: 'POST' })
   .validator(nameInput)
   .handler(async ({ data }) => {
-    await db.insert(entries).values({ name: data.name })
+    await db.insert(entries).values({
+      name: data.name,
+      weekdays: data.weekdays,
+      classTime: data.classTime,
+    })
     return { ok: true as const }
   })
 
@@ -43,7 +53,13 @@ export const listEntries = createServerFn({ method: 'GET' })
   .middleware([requireAdmin])
   .handler(async () => {
     const rows = await db.select().from(entries).orderBy(desc(entries.createdAt))
-    return rows.map((row) => ({ id: row.id, name: row.name, createdAt: row.createdAt.toISOString() }))
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      weekdays: row.weekdays,
+      classTime: row.classTime,
+      createdAt: row.createdAt.toISOString(),
+    }))
   })
 
 /** Admin only: remove a single entry. */
