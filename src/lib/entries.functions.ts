@@ -4,9 +4,17 @@ import { getStore } from '@netlify/blobs'
 import { desc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 
-import { db } from '../../db/index.js'
+import { getDatabase } from '../../db/index.js'
 import { entries, festivals } from '../../db/schema.js'
 import { classTimes, weekdayValues } from './entry-options'
+import {
+  addLocalEntry,
+  createLocalFestival,
+  deleteLocalEntry,
+  isLocalTestMode,
+  listLocalEntries,
+  listLocalFestivals,
+} from './local-test-store.server'
 
 export const ADMIN_ROLE = 'admin'
 
@@ -24,6 +32,9 @@ const nameInput = z.object({
 export const submitName = createServerFn({ method: 'POST' })
   .validator(nameInput)
   .handler(async ({ data }) => {
+    if (isLocalTestMode()) return addLocalEntry(data)
+
+    const db = getDatabase()
     const [festival] = await db
       .select({ id: festivals.id })
       .from(festivals)
@@ -42,19 +53,32 @@ export const submitName = createServerFn({ method: 'POST' })
 
 /** Returns the signed-in user (if any) and whether they are an admin. */
 export const getViewer = createServerFn({ method: 'GET' }).handler(async () => {
+  if (isLocalTestMode()) {
+    return {
+      email: 'teste@local',
+      name: 'Administrador local',
+      isAdmin: true,
+      isLocal: true,
+    }
+  }
+
   const user = await getUser()
   if (!user) return null
   return {
     email: user.email ?? null,
     name: user.name ?? null,
     isAdmin: (user.roles ?? []).includes(ADMIN_ROLE),
+    isLocal: false,
   }
 })
 
 const requireAdmin = createMiddleware({ type: 'function' }).server(async ({ next }) => {
-  const user = await getUser()
-  if (!user) throw new Error('Faça login para continuar.')
-  if (!(user.roles ?? []).includes(ADMIN_ROLE)) throw new Error('Acesso restrito a administradores.')
+  const localMode = isLocalTestMode()
+  const user = localMode ? null : await getUser()
+  if (!localMode && !user) throw new Error('Faça login para continuar.')
+  if (!localMode && !(user?.roles ?? []).includes(ADMIN_ROLE)) {
+    throw new Error('Acesso restrito a administradores.')
+  }
   return next({ context: { user } })
 })
 
@@ -86,6 +110,9 @@ function isSupportedBanner(bytes: Uint8Array, contentType: string) {
 
 /** Public: list the available festivals and their banner URLs. */
 export const listFestivals = createServerFn({ method: 'GET' }).handler(async () => {
+  if (isLocalTestMode()) return listLocalFestivals()
+
+  const db = getDatabase()
   const rows = await db.select().from(festivals).orderBy(desc(festivals.createdAt))
   return rows.map((row) => ({
     id: row.id,
@@ -115,10 +142,13 @@ export const createFestival = createServerFn({ method: 'POST' })
       throw new Error('O arquivo enviado não corresponde a uma imagem PNG, JPG ou WebP válida.')
     }
 
+    if (isLocalTestMode()) return createLocalFestival(name, buffer, file.type)
+
     const bannerKey = crypto.randomUUID()
     const store = bannerStore()
     await store.set(bannerKey, buffer, { metadata: { contentType: file.type } })
     try {
+      const db = getDatabase()
       const [festival] = await db
         .insert(festivals)
         .values({ name, bannerKey })
@@ -142,6 +172,9 @@ export const createFestival = createServerFn({ method: 'POST' })
 export const listEntries = createServerFn({ method: 'GET' })
   .middleware([requireAdmin])
   .handler(async () => {
+    if (isLocalTestMode()) return listLocalEntries()
+
+    const db = getDatabase()
     const rows = await db
       .select({
         id: entries.id,
@@ -169,6 +202,9 @@ export const deleteEntry = createServerFn({ method: 'POST' })
   .middleware([requireAdmin])
   .validator(z.object({ id: z.number().int().positive() }))
   .handler(async ({ data }) => {
+    if (isLocalTestMode()) return deleteLocalEntry(data.id)
+
+    const db = getDatabase()
     await db.delete(entries).where(eq(entries.id, data.id))
     return { ok: true as const }
   })

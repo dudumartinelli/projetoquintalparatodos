@@ -103,10 +103,18 @@ function AdminPage() {
           </div>
           {(screen.kind === 'admin' || screen.kind === 'forbidden') && (
             <div className="flex items-center gap-2">
-              <span className="hidden text-sm text-muted-foreground sm:inline">{screen.viewer.email}</span>
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
-                <LogOut /> Sair
-              </Button>
+              {screen.kind === 'admin' && screen.viewer.isLocal ? (
+                <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
+                  Modo de teste local
+                </span>
+              ) : (
+                <>
+                  <span className="hidden text-sm text-muted-foreground sm:inline">{screen.viewer.email}</span>
+                  <Button variant="ghost" size="sm" onClick={handleLogout}>
+                    <LogOut /> Sair
+                  </Button>
+                </>
+              )}
             </div>
           )}
         </div>

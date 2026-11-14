@@ -19,8 +19,12 @@ Um formulário público em que o visitante escolhe um festival pelo banner, info
 
 ```bash
 pnpm install
-netlify dev   # disponibiliza banco de dados e Identity localmente
+pnpm dev:local   # teste local sem conta ou serviços Netlify
 ```
+
+Abra `http://localhost:3000`. No modo local, acesse `/admin` para criar festivais e testar inscrições; não é necessário fazer login. Os dados e banners ficam em `.local-test/`, ignorado pelo Git, e persistem entre execuções.
+
+Para testar com os serviços reais da Netlify, use `netlify dev` em um projeto vinculado à sua conta.
 
 ## Banco de dados
 
