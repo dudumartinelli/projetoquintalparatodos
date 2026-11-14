@@ -4,6 +4,13 @@ import { ArrowRight, Check, Lock } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -15,13 +22,14 @@ export const Route = createFileRoute('/')({
 })
 
 type Status = 'idle' | 'pending' | 'success' | 'error'
-type FormErrors = { festivalId?: string; name?: string; weekdays?: string; classTime?: string }
+type FormErrors = { name?: string; weekdays?: string; classTime?: string }
 type FestivalOption = Awaited<ReturnType<typeof listFestivals>>[number]
 
 function Home() {
   const [festivals, setFestivals] = useState<FestivalOption[] | null>(null)
   const [festivalLoadError, setFestivalLoadError] = useState(false)
   const [selectedFestivalId, setSelectedFestivalId] = useState<number | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
   const [name, setName] = useState('')
   const [selectedWeekdays, setSelectedWeekdays] = useState<Weekday[]>([])
   const [classTime, setClassTime] = useState<ClassTime | ''>('')
@@ -70,7 +78,6 @@ function Home() {
     if (status === 'pending') return
     const trimmed = name.trim()
     const errors: FormErrors = {}
-    if (!selectedFestivalId) errors.festivalId = 'Selecione um festival.'
     if (trimmed.length < 2) errors.name = 'Digite pelo menos 2 caracteres.'
     if (selectedWeekdays.length === 0) errors.weekdays = 'Selecione pelo menos um dia.'
     if (!classTime) errors.classTime = 'Selecione um horário.'
@@ -80,7 +87,7 @@ function Home() {
     }
     const festival = festivals?.find((option) => option.id === selectedFestivalId)
     if (!festival) {
-      setFieldErrors({ festivalId: 'O festival selecionado não está mais disponível.' })
+      setSubmitError('O festival selecionado não está mais disponível. Atualize a página e tente novamente.')
       return
     }
     const orderedWeekdays = weekdays
@@ -104,6 +111,20 @@ function Home() {
     } catch {
       setStatus('error')
       setSubmitError('Não foi possível enviar agora. Tente novamente em instantes.')
+    }
+  }
+
+  function handleDialogOpenChange(open: boolean) {
+    if (!open && status === 'pending') return
+    setDialogOpen(open)
+    if (!open) {
+      setSelectedFestivalId(null)
+      setName('')
+      setSelectedWeekdays([])
+      setClassTime('')
+      setStatus('idle')
+      setFieldErrors({})
+      setSubmitError(null)
     }
   }
 
@@ -136,194 +157,194 @@ function Home() {
             Adicione o nome do <em className="text-primary">Aluno</em> na lista.
           </h1>
           <p className="max-w-reading text-lg text-muted-foreground">
-            Escolha o festival e informe o nome do aluno, os dias da semana e o horário desejado.
-            Os dados ficam visíveis apenas para os organizadores.
+            Clique no banner do festival para iniciar a inscrição. Depois, informe os dados do
+            aluno e os dias e horários desejados.
           </p>
         </section>
 
-        <section className="rounded-2xl border bg-card p-6 shadow-[0_30px_60px_-30px_oklch(0.35_0.08_255/0.28)] sm:p-10">
-          {status === 'success' ? (
-            <div className="space-y-6 text-center" role="status">
-              <div className="mx-auto grid size-14 place-items-center rounded-full bg-primary text-primary-foreground">
-                <Check className="size-7" />
-              </div>
-              <div className="space-y-2">
-                <h2 className="font-display text-4xl">Pronto, {submittedName}!</h2>
-                <p className="text-muted-foreground">
-                  Inscrição para <strong>{submittedFestivalName}</strong> adicionada à lista.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {submittedWeekdays
-                    .map((day) => weekdays.find((option) => option.value === day)?.label)
-                    .join(', ')}{' '}
-                  às {submittedClassTime}
-                </p>
-              </div>
-              <Button variant="outline" onClick={() => setStatus('idle')}>
-                Enviar outro nome
+        <section className="space-y-5">
+          <div className="space-y-1">
+            <h2 className="font-display text-4xl">Escolha o festival</h2>
+            <p className="text-sm text-muted-foreground">
+              Selecione um banner para preencher os dados da inscrição.
+            </p>
+          </div>
+          {festivalLoadError ? (
+            <div className="space-y-2 rounded-2xl border border-dashed bg-card p-8 text-center">
+              <p className="text-sm text-destructive">Não foi possível carregar os festivais.</p>
+              <Button type="button" variant="outline" size="sm" onClick={loadFestivals}>
+                Tentar novamente
               </Button>
             </div>
+          ) : festivals === null ? (
+            <p className="rounded-2xl border bg-card p-8 text-sm text-muted-foreground" role="status">
+              Carregando festivais…
+            </p>
+          ) : festivals.length === 0 ? (
+            <p className="rounded-2xl border border-dashed bg-card p-8 text-sm text-muted-foreground">
+              Ainda não há festivais disponíveis para inscrição.
+            </p>
           ) : (
-            <form onSubmit={handleSubmit} noValidate className="space-y-6">
-              <div className="space-y-1">
-                <h2 className="font-display text-4xl">Inscrição do aluno</h2>
-                <p className="text-sm text-muted-foreground">Preencha os dados da inscrição.</p>
-              </div>
-              <fieldset className="space-y-3" disabled={status === 'pending'}>
-                <legend className="text-sm leading-none font-medium">Escolha o festival</legend>
-                {festivalLoadError ? (
-                  <div className="space-y-2">
-                    <p className="text-sm text-destructive">Não foi possível carregar os festivais.</p>
-                    <Button type="button" variant="outline" size="sm" onClick={loadFestivals}>
-                      Tentar novamente
-                    </Button>
-                  </div>
-                ) : festivals === null ? (
-                  <p className="text-sm text-muted-foreground" role="status">Carregando festivais…</p>
-                ) : festivals.length === 0 ? (
-                  <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                    Ainda não há festivais disponíveis para inscrição.
-                  </p>
-                ) : (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {festivals.map((festival) => {
-                      const selected = selectedFestivalId === festival.id
-                      return (
-                        <button
-                          key={festival.id}
-                          type="button"
-                          aria-pressed={selected}
-                          onClick={() => {
-                            setSelectedFestivalId(festival.id)
-                            setFieldErrors((current) => ({ ...current, festivalId: undefined }))
-                          }}
-                          className={`overflow-hidden rounded-xl border text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                            selected ? 'border-primary ring-2 ring-primary' : 'border-border hover:border-primary/60'
-                          }`}
-                        >
-                          <img
-                            src={festival.bannerUrl}
-                            alt=""
-                            className="aspect-[16/9] w-full object-cover"
-                          />
-                          <span className="block p-3 font-medium">{festival.name}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-                {fieldErrors.festivalId && (
-                  <p role="alert" className="text-sm text-destructive">{fieldErrors.festivalId}</p>
-                )}
-              </fieldset>
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome completo do Aluno</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  autoComplete="name"
-                  placeholder="Ex.: Maria da Silva"
-                  value={name}
-                  maxLength={120}
-                  onChange={(e) => {
-                    setName(e.target.value)
-                    setFieldErrors((current) => ({ ...current, name: undefined }))
+            <div className="grid gap-4 sm:grid-cols-2">
+              {festivals.map((festival) => (
+                <button
+                  key={festival.id}
+                  type="button"
+                  aria-haspopup="dialog"
+                  onClick={() => {
+                    setSelectedFestivalId(festival.id)
+                    setDialogOpen(true)
                   }}
-                  aria-invalid={fieldErrors.name ? true : undefined}
-                  aria-describedby={fieldErrors.name ? 'name-error' : undefined}
-                  disabled={status === 'pending'}
-                  className="h-12 text-base md:text-base"
-                  required
-                />
-                {fieldErrors.name && (
-                  <p id="name-error" role="alert" className="text-sm text-destructive">
-                    {fieldErrors.name}
-                  </p>
-                )}
-              </div>
-              <fieldset className="space-y-3">
-                <legend className="text-sm leading-none font-medium">Dias da semana</legend>
-                <p className="text-sm text-muted-foreground">Selecione um ou mais dias.</p>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {weekdays.map((day) => {
-                    const id = `weekday-${day.value}`
-                    return (
-                      <div key={day.value} className="flex items-center gap-2">
-                        <Checkbox
-                          id={id}
-                          checked={selectedWeekdays.includes(day.value)}
-                          onCheckedChange={(checked) => {
-                            setSelectedWeekdays((current) =>
-                              checked
-                                ? [...current, day.value]
-                                : current.filter((value) => value !== day.value),
-                            )
-                            setFieldErrors((current) => ({ ...current, weekdays: undefined }))
-                          }}
-                          aria-invalid={fieldErrors.weekdays ? true : undefined}
-                          aria-describedby={fieldErrors.weekdays ? 'weekdays-error' : undefined}
-                          disabled={status === 'pending'}
-                        />
-                        <Label htmlFor={id} className="cursor-pointer font-normal">
-                          {day.label}
-                        </Label>
-                      </div>
-                    )
-                  })}
-                </div>
-                {fieldErrors.weekdays && (
-                  <p id="weekdays-error" role="alert" className="text-sm text-destructive">
-                    {fieldErrors.weekdays}
-                  </p>
-                )}
-              </fieldset>
-              <fieldset className="space-y-3">
-                <legend className="text-sm leading-none font-medium">Horário</legend>
-                <RadioGroup
-                  value={classTime}
-                  onValueChange={(value) => {
-                    setClassTime(classTimes.find((time) => time === value) ?? '')
-                    setFieldErrors((current) => ({ ...current, classTime: undefined }))
-                  }}
-                  aria-label="Horário"
-                  aria-invalid={fieldErrors.classTime ? true : undefined}
-                  aria-describedby={fieldErrors.classTime ? 'class-time-error' : undefined}
-                  disabled={status === 'pending'}
-                  className="grid grid-cols-2"
+                  className="overflow-hidden rounded-2xl border bg-card text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
-                  {classTimes.map((time) => (
-                    <div key={time} className="flex items-center gap-2">
-                      <RadioGroupItem id={`time-${time}`} value={time} />
-                      <Label htmlFor={`time-${time}`} className="cursor-pointer font-normal">
-                        {time}
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-                {fieldErrors.classTime && (
-                  <p id="class-time-error" role="alert" className="text-sm text-destructive">
-                    {fieldErrors.classTime}
-                  </p>
-                )}
-              </fieldset>
-              {submitError && (
-                <p role="alert" className="text-sm text-destructive">
-                  {submitError}
-                </p>
-              )}
-              <Button
-                type="submit"
-                size="lg"
-                className="h-12 w-full text-base"
-                disabled={status === 'pending' || !festivals?.length || festivalLoadError}
-              >
-                {status === 'pending' ? 'Enviando…' : 'Entrar na lista'}
-                {status !== 'pending' && <ArrowRight />}
-              </Button>
-            </form>
+                  <img
+                    src={festival.bannerUrl}
+                    alt=""
+                    className="aspect-[16/9] w-full object-cover"
+                  />
+                  <span className="block p-4 font-medium">{festival.name}</span>
+                </button>
+              ))}
+            </div>
           )}
         </section>
       </main>
+
+      <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          {status === 'success' ? (
+            <div className="space-y-6 py-2 text-center" role="status">
+              <div className="mx-auto grid size-14 place-items-center rounded-full bg-primary text-primary-foreground">
+                <Check className="size-7" />
+              </div>
+              <DialogHeader className="items-center">
+                <DialogTitle className="font-display text-4xl">Pronto, {submittedName}!</DialogTitle>
+                <DialogDescription>
+                  Inscrição para <strong>{submittedFestivalName}</strong> adicionada à lista.
+                </DialogDescription>
+              </DialogHeader>
+              <p className="text-sm text-muted-foreground">
+                {submittedWeekdays
+                  .map((day) => weekdays.find((option) => option.value === day)?.label)
+                  .join(', ')}{' '}
+                às {submittedClassTime}
+              </p>
+              <Button variant="outline" onClick={() => handleDialogOpenChange(false)}>
+                Voltar aos festivais
+              </Button>
+            </div>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-display text-3xl">Inscrição do aluno</DialogTitle>
+                <DialogDescription>
+                  Festival: <strong>{festivals?.find((festival) => festival.id === selectedFestivalId)?.name}</strong>.
+                  Preencha os dados da inscrição.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} noValidate className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome completo do Aluno</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    autoComplete="name"
+                    placeholder="Ex.: Maria da Silva"
+                    value={name}
+                    maxLength={120}
+                    onChange={(e) => {
+                      setName(e.target.value)
+                      setFieldErrors((current) => ({ ...current, name: undefined }))
+                    }}
+                    aria-invalid={fieldErrors.name ? true : undefined}
+                    aria-describedby={fieldErrors.name ? 'name-error' : undefined}
+                    disabled={status === 'pending'}
+                    className="h-12 text-base md:text-base"
+                    required
+                  />
+                  {fieldErrors.name && (
+                    <p id="name-error" role="alert" className="text-sm text-destructive">
+                      {fieldErrors.name}
+                    </p>
+                  )}
+                </div>
+                <fieldset className="space-y-3" disabled={status === 'pending'}>
+                  <legend className="text-sm leading-none font-medium">Dias da semana</legend>
+                  <p className="text-sm text-muted-foreground">Selecione um ou mais dias.</p>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {weekdays.map((day) => {
+                      const id = `weekday-${day.value}`
+                      return (
+                        <div key={day.value} className="flex items-center gap-2">
+                          <Checkbox
+                            id={id}
+                            checked={selectedWeekdays.includes(day.value)}
+                            onCheckedChange={(checked) => {
+                              setSelectedWeekdays((current) =>
+                                checked
+                                  ? [...current, day.value]
+                                  : current.filter((value) => value !== day.value),
+                              )
+                              setFieldErrors((current) => ({ ...current, weekdays: undefined }))
+                            }}
+                            aria-invalid={fieldErrors.weekdays ? true : undefined}
+                            aria-describedby={fieldErrors.weekdays ? 'weekdays-error' : undefined}
+                          />
+                          <Label htmlFor={id} className="cursor-pointer font-normal">
+                            {day.label}
+                          </Label>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {fieldErrors.weekdays && (
+                    <p id="weekdays-error" role="alert" className="text-sm text-destructive">
+                      {fieldErrors.weekdays}
+                    </p>
+                  )}
+                </fieldset>
+                <fieldset className="space-y-3" disabled={status === 'pending'}>
+                  <legend className="text-sm leading-none font-medium">Horário</legend>
+                  <RadioGroup
+                    value={classTime}
+                    onValueChange={(value) => {
+                      setClassTime(classTimes.find((time) => time === value) ?? '')
+                      setFieldErrors((current) => ({ ...current, classTime: undefined }))
+                    }}
+                    aria-label="Horário"
+                    aria-invalid={fieldErrors.classTime ? true : undefined}
+                    aria-describedby={fieldErrors.classTime ? 'class-time-error' : undefined}
+                    className="grid grid-cols-2"
+                  >
+                    {classTimes.map((time) => (
+                      <div key={time} className="flex items-center gap-2">
+                        <RadioGroupItem id={`time-${time}`} value={time} />
+                        <Label htmlFor={`time-${time}`} className="cursor-pointer font-normal">
+                          {time}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                  {fieldErrors.classTime && (
+                    <p id="class-time-error" role="alert" className="text-sm text-destructive">
+                      {fieldErrors.classTime}
+                    </p>
+                  )}
+                </fieldset>
+                {submitError && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {submitError}
+                  </p>
+                )}
+                <Button type="submit" size="lg" className="h-12 w-full text-base" disabled={status === 'pending'}>
+                  {status === 'pending' ? 'Enviando…' : 'Entrar na lista'}
+                  {status !== 'pending' && <ArrowRight />}
+                </Button>
+              </form>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
