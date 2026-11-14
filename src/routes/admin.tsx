@@ -32,7 +32,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { deleteEntry, getViewer, listEntries } from '@/lib/entries.functions'
+import { createFestival, deleteEntry, getViewer, listEntries, listFestivals } from '@/lib/entries.functions'
 import { weekdays } from '@/lib/entry-options'
 import { buildCsv, downloadFile, exportFilename, type ExportRow } from '@/lib/export'
 
@@ -139,7 +139,12 @@ function AdminPage() {
           />
         )}
         {screen.kind === 'forbidden' && <Forbidden />}
-        {screen.kind === 'admin' && <EntriesPanel />}
+        {screen.kind === 'admin' && (
+          <div className="space-y-12">
+            <FestivalManager />
+            <EntriesPanel />
+          </div>
+        )}
       </main>
     </div>
   )
@@ -305,6 +310,112 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
+type Festival = Awaited<ReturnType<typeof listFestivals>>[number]
+
+function FestivalManager() {
+  const [festivals, setFestivals] = useState<Festival[] | null>(null)
+  const [loadError, setLoadError] = useState(false)
+  const [pending, setPending] = useState(false)
+  const loadFestivals = useCallback(async () => {
+    try {
+      setFestivals(await listFestivals())
+      setLoadError(false)
+    } catch {
+      setLoadError(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    void listFestivals()
+      .then((items) => {
+        if (!active) return
+        setFestivals(items)
+        setLoadError(false)
+      })
+      .catch(() => {
+        if (active) setLoadError(true)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (pending) return
+    const form = event.currentTarget
+    setPending(true)
+    try {
+      const festival = await createFestival({ data: new FormData(form) })
+      setFestivals((current) => [festival, ...(current ?? [])])
+      form.reset()
+      toast.success(`Festival “${festival.name}” criado.`)
+    } catch {
+      toast.error('Não foi possível criar o festival. Confira o nome e o banner.')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <section className="space-y-5">
+      <div>
+        <h1 className="font-display text-5xl tracking-tight">Festivais</h1>
+        <p className="mt-1 text-muted-foreground">Crie os festivais e seus banners para inscrição.</p>
+      </div>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+        <form onSubmit={submit} className="space-y-4 rounded-2xl border bg-card p-5 sm:p-6">
+          <h2 className="font-display text-3xl">Novo festival</h2>
+          <div className="space-y-2">
+            <Label htmlFor="festival-name">Nome do festival</Label>
+            <Input id="festival-name" name="name" maxLength={100} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="festival-banner">Banner</Label>
+            <Input
+              id="festival-banner"
+              name="banner"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              required
+            />
+            <p className="text-xs text-muted-foreground">PNG, JPG ou WebP, até 5 MB.</p>
+          </div>
+          <Button type="submit" disabled={pending}>
+            {pending ? 'Criando…' : 'Criar festival'}
+          </Button>
+        </form>
+
+        <div className="space-y-3">
+          <h2 className="font-display text-3xl">Festivais cadastrados</h2>
+          {loadError ? (
+            <div className="space-y-2 rounded-xl border border-dashed p-6 text-center">
+              <p className="text-sm text-muted-foreground">Não foi possível carregar os festivais.</p>
+              <Button variant="outline" size="sm" onClick={loadFestivals}>Tentar novamente</Button>
+            </div>
+          ) : festivals === null ? (
+            <Skeleton className="h-24 w-full" />
+          ) : festivals.length === 0 ? (
+            <p className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+              Nenhum festival cadastrado.
+            </p>
+          ) : (
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {festivals.map((festival) => (
+                <li key={festival.id} className="overflow-hidden rounded-xl border bg-card">
+                  <img src={festival.bannerUrl} alt="" className="aspect-[16/9] w-full object-cover" />
+                  <p className="p-3 font-medium">{festival.name}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function EntriesPanel() {
   const [rows, setRows] = useState<ExportRow[] | null>(null)
   const [loadError, setLoadError] = useState(false)
@@ -325,8 +436,20 @@ function EntriesPanel() {
   }, [])
 
   useEffect(() => {
-    void load()
-  }, [load])
+    let active = true
+    void listEntries()
+      .then((items) => {
+        if (!active) return
+        setRows(items)
+        setLoadError(false)
+      })
+      .catch(() => {
+        if (active) setLoadError(true)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const filtered = useMemo(() => {
     if (!rows) return []
@@ -434,6 +557,7 @@ function EntriesPanel() {
                 <TableRow>
                   <TableHead className="w-16">#</TableHead>
                   <TableHead>Nome</TableHead>
+                  <TableHead>Festival</TableHead>
                   <TableHead>Dias</TableHead>
                   <TableHead>Horário</TableHead>
                   <TableHead className="hidden sm:table-cell">Enviado em</TableHead>
@@ -447,6 +571,7 @@ function EntriesPanel() {
                   <TableRow key={row.id}>
                     <TableCell className="text-muted-foreground tabular-nums">{positions.get(row.id)}</TableCell>
                     <TableCell className="font-medium">{row.name}</TableCell>
+                    <TableCell>{row.festivalName}</TableCell>
                     <TableCell>
                       {row.weekdays.length > 0
                         ? row.weekdays
@@ -470,7 +595,7 @@ function EntriesPanel() {
                 ))}
                 {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                       Nenhum nome encontrado para “{query}”.
                     </TableCell>
                   </TableRow>

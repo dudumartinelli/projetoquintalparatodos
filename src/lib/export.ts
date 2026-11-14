@@ -3,6 +3,7 @@ import { weekdays } from './entry-options'
 export type ExportRow = {
   id: number
   name: string
+  festivalName: string
   weekdays: string[]
   classTime: string
   createdAt: string
@@ -19,11 +20,12 @@ function csvCell(value: string, separator: string) {
 }
 
 export function buildCsv(rows: ExportRow[], separator: ',' | ';') {
-  const header = ['#', 'Nome', 'Dias da semana', 'Horário', 'Enviado em']
+  const header = ['#', 'Nome', 'Festival', 'Dias da semana', 'Horário', 'Enviado em']
   const lines = rows.map((row, index) =>
     [
       String(rows.length - index),
       row.name,
+      row.festivalName,
       row.weekdays.map((day) => weekdays.find((option) => option.value === day)?.label ?? day).join(', '),
       row.classTime || '—',
       formatDate(row.createdAt),

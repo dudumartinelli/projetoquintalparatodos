@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowRight, Check, Lock } from 'lucide-react'
 
@@ -8,16 +8,20 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { classTimes, weekdays, type ClassTime, type Weekday } from '@/lib/entry-options'
-import { submitName } from '@/lib/entries.functions'
+import { listFestivals, submitName } from '@/lib/entries.functions'
 
 export const Route = createFileRoute('/')({
   component: Home,
 })
 
 type Status = 'idle' | 'pending' | 'success' | 'error'
-type FormErrors = { name?: string; weekdays?: string; classTime?: string }
+type FormErrors = { festivalId?: string; name?: string; weekdays?: string; classTime?: string }
+type FestivalOption = Awaited<ReturnType<typeof listFestivals>>[number]
 
 function Home() {
+  const [festivals, setFestivals] = useState<FestivalOption[] | null>(null)
+  const [festivalLoadError, setFestivalLoadError] = useState(false)
+  const [selectedFestivalId, setSelectedFestivalId] = useState<number | null>(null)
   const [name, setName] = useState('')
   const [selectedWeekdays, setSelectedWeekdays] = useState<Weekday[]>([])
   const [classTime, setClassTime] = useState<ClassTime | ''>('')
@@ -25,8 +29,34 @@ function Home() {
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submittedName, setSubmittedName] = useState('')
+  const [submittedFestivalName, setSubmittedFestivalName] = useState('')
   const [submittedWeekdays, setSubmittedWeekdays] = useState<Weekday[]>([])
   const [submittedClassTime, setSubmittedClassTime] = useState<ClassTime | ''>('')
+
+  const loadFestivals = useCallback(async () => {
+    try {
+      setFestivals(await listFestivals())
+      setFestivalLoadError(false)
+    } catch {
+      setFestivalLoadError(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    void listFestivals()
+      .then((items) => {
+        if (!active) return
+        setFestivals(items)
+        setFestivalLoadError(false)
+      })
+      .catch(() => {
+        if (active) setFestivalLoadError(true)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   // Invite and password-reset emails link to the site root; hand them to the admin area.
   useEffect(() => {
@@ -40,11 +70,17 @@ function Home() {
     if (status === 'pending') return
     const trimmed = name.trim()
     const errors: FormErrors = {}
+    if (!selectedFestivalId) errors.festivalId = 'Selecione um festival.'
     if (trimmed.length < 2) errors.name = 'Digite pelo menos 2 caracteres.'
     if (selectedWeekdays.length === 0) errors.weekdays = 'Selecione pelo menos um dia.'
     if (!classTime) errors.classTime = 'Selecione um horário.'
     setFieldErrors(errors)
-    if (Object.keys(errors).length > 0 || !classTime) {
+    if (Object.keys(errors).length > 0 || !classTime || !selectedFestivalId) {
+      return
+    }
+    const festival = festivals?.find((option) => option.id === selectedFestivalId)
+    if (!festival) {
+      setFieldErrors({ festivalId: 'O festival selecionado não está mais disponível.' })
       return
     }
     const orderedWeekdays = weekdays
@@ -54,12 +90,14 @@ function Home() {
     setStatus('pending')
     try {
       await submitName({
-        data: { name: trimmed, weekdays: orderedWeekdays, classTime },
+        data: { name: trimmed, festivalId: selectedFestivalId, weekdays: orderedWeekdays, classTime },
       })
       setSubmittedName(trimmed)
+      setSubmittedFestivalName(festival.name)
       setSubmittedWeekdays(orderedWeekdays)
       setSubmittedClassTime(classTime)
       setName('')
+      setSelectedFestivalId(null)
       setSelectedWeekdays([])
       setClassTime('')
       setStatus('success')
@@ -98,8 +136,8 @@ function Home() {
             Adicione o nome do <em className="text-primary">Aluno</em> na lista.
           </h1>
           <p className="max-w-reading text-lg text-muted-foreground">
-            Informe o nome do aluno, os dias da semana e o horário desejado. Os dados ficam visíveis
-            apenas para os organizadores.
+            Escolha o festival e informe o nome do aluno, os dias da semana e o horário desejado.
+            Os dados ficam visíveis apenas para os organizadores.
           </p>
         </section>
 
@@ -111,7 +149,9 @@ function Home() {
               </div>
               <div className="space-y-2">
                 <h2 className="font-display text-4xl">Pronto, {submittedName}!</h2>
-                <p className="text-muted-foreground">Sua inscrição foi adicionada à lista.</p>
+                <p className="text-muted-foreground">
+                  Inscrição para <strong>{submittedFestivalName}</strong> adicionada à lista.
+                </p>
                 <p className="text-sm text-muted-foreground">
                   {submittedWeekdays
                     .map((day) => weekdays.find((option) => option.value === day)?.label)
@@ -129,6 +169,53 @@ function Home() {
                 <h2 className="font-display text-4xl">Inscrição do aluno</h2>
                 <p className="text-sm text-muted-foreground">Preencha os dados da inscrição.</p>
               </div>
+              <fieldset className="space-y-3" disabled={status === 'pending'}>
+                <legend className="text-sm leading-none font-medium">Escolha o festival</legend>
+                {festivalLoadError ? (
+                  <div className="space-y-2">
+                    <p className="text-sm text-destructive">Não foi possível carregar os festivais.</p>
+                    <Button type="button" variant="outline" size="sm" onClick={loadFestivals}>
+                      Tentar novamente
+                    </Button>
+                  </div>
+                ) : festivals === null ? (
+                  <p className="text-sm text-muted-foreground" role="status">Carregando festivais…</p>
+                ) : festivals.length === 0 ? (
+                  <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                    Ainda não há festivais disponíveis para inscrição.
+                  </p>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {festivals.map((festival) => {
+                      const selected = selectedFestivalId === festival.id
+                      return (
+                        <button
+                          key={festival.id}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => {
+                            setSelectedFestivalId(festival.id)
+                            setFieldErrors((current) => ({ ...current, festivalId: undefined }))
+                          }}
+                          className={`overflow-hidden rounded-xl border text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                            selected ? 'border-primary ring-2 ring-primary' : 'border-border hover:border-primary/60'
+                          }`}
+                        >
+                          <img
+                            src={festival.bannerUrl}
+                            alt=""
+                            className="aspect-[16/9] w-full object-cover"
+                          />
+                          <span className="block p-3 font-medium">{festival.name}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+                {fieldErrors.festivalId && (
+                  <p role="alert" className="text-sm text-destructive">{fieldErrors.festivalId}</p>
+                )}
+              </fieldset>
               <div className="space-y-2">
                 <Label htmlFor="name">Nome completo do Aluno</Label>
                 <Input
@@ -228,7 +315,7 @@ function Home() {
                 type="submit"
                 size="lg"
                 className="h-12 w-full text-base"
-                disabled={status === 'pending'}
+                disabled={status === 'pending' || !festivals?.length || festivalLoadError}
               >
                 {status === 'pending' ? 'Enviando…' : 'Entrar na lista'}
                 {status !== 'pending' && <ArrowRight />}

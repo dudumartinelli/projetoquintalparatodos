@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as ApiFestivalBannersBannerIdRouteImport } from './routes/api.festival-banners.$bannerId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,41 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiFestivalBannersBannerIdRoute =
+  ApiFestivalBannersBannerIdRouteImport.update({
+    id: '/api/festival-banners/$bannerId',
+    path: '/api/festival-banners/$bannerId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/api/festival-banners/$bannerId': typeof ApiFestivalBannersBannerIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/api/festival-banners/$bannerId': typeof ApiFestivalBannersBannerIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/api/festival-banners/$bannerId': typeof ApiFestivalBannersBannerIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin'
+  fullPaths: '/' | '/admin' | '/api/festival-banners/$bannerId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin'
-  id: '__root__' | '/' | '/admin'
+  to: '/' | '/admin' | '/api/festival-banners/$bannerId'
+  id: '__root__' | '/' | '/admin' | '/api/festival-banners/$bannerId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  ApiFestivalBannersBannerIdRoute: typeof ApiFestivalBannersBannerIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +76,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/festival-banners/$bannerId': {
+      id: '/api/festival-banners/$bannerId'
+      path: '/api/festival-banners/$bannerId'
+      fullPath: '/api/festival-banners/$bannerId'
+      preLoaderRoute: typeof ApiFestivalBannersBannerIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  ApiFestivalBannersBannerIdRoute: ApiFestivalBannersBannerIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
